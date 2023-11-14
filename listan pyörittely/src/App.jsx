@@ -12,6 +12,8 @@ const initialState = {
     filterRight: "",
     resultsLeft: [],
     resultsRight: [],
+    disableRightArrow: false,
+    disableLeftArrow: false
   }
 
 
@@ -19,18 +21,29 @@ function reducer(state, action) {
   switch (action.type) {
 
     case "SELECT_NAME": {
+    //Tarkastaa onko nimi jo valittuna. Jos on, poistaa nimen selected-listalta ja poistaa nuolten disabloinnit.
       if (state.selected.includes(action.value)) {
-          return {...state, selected: state.selected.filter(selectedName => selectedName !== action.value)}
-        } else {
-          return {...state, selected: state.selected.concat(action.value)}
-      };
+          return {...state, selected: state.selected.filter(selectedName => selectedName !== action.value), disableLeftArrow: false, disableRightArrow: false}
+    //Estää valitsemasta nimiä samaan aikaan sekä names1 että names2 listoilta.
+      } else if (state.names1.filter(name => state.selected.includes(name)).length > 0 && state.names2.includes(action.value)) {
+          return {...state}
+      } else if (state.names2.filter(name => state.selected.includes(name)).length > 0 && state.names1.includes(action.value)) {
+          return {...state}
+      //Lisää nimen selected-listaan ja disabloi vasemmalle osoittavan nuolen.
+        }  else if (state.names1.includes(action.value)) {
+            return {...state, selected: state.selected.concat(action.value), disableLeftArrow: true}
+      //Lisää nimen selected-listaan ja disabloi oikealle osoittavan nuolen.
+          } else if (state.names2.includes(action.value)) {
+              return {...state, selected: state.selected.concat(action.value), disableRightArrow: true}   
+      }      
     }
+
     case "MOVE_NAME_RIGHT": {
         for (let i=0; i < state.selected.length; i++) {
           state.names2.push(state.selected[i])
           state.names1 = state.names1.filter(name => name !== state.selected[i])
         }
-        return {...state, selected: []}
+        return {...state, selected: [], disableLeftArrow: false}
       
     }
     case "MOVE_NAME_LEFT": { 
@@ -38,20 +51,19 @@ function reducer(state, action) {
         state.names1.push(state.selected[i])
         state.names2 = state.names2.filter(name => name !== state.selected[i])
       }
-      return {...state, selected: []}
+      return {...state, selected: [], disableRightArrow: false}
     
   }
     case "FILTER_LEFT": {
-      const filterResults = state.names1.filter(name => name.toLowerCase().includes(action.newInput.toLowerCase()))
-      return {
-        ...state, [state.filterLeft]: action.newInput, [state.resultsLeft]: filterResults
-      };
+      return {...state, 
+        [action.field]: action.newInput, 
+        [action.results]: state.names1.filter(name => name.toLowerCase().includes(action.newInput.toLowerCase()))};  
     }
+
     case "FILTER_RIGHT": {
-      const filterResults = state.names2.filter(name => name.toLowerCase().includes(action.newInput.toLowerCase()))
-      return {
-        ...state, [state.filterRight]: action.newInput, [state.resultsRight]: filterResults
-      };
+      return {...state, 
+        [action.field]: action.newInput, 
+        [action.results]: state.names2.filter(name => name.toLowerCase().includes(action.newInput.toLowerCase()))}; 
     }
 
   }
@@ -80,11 +92,11 @@ const handleToLeft = () => {
 }
 
 const handleFilterRight = (event) => {
-  dispatch({ type: "FILTER_RIGHT", newInput: event.target.value })
+  dispatch({ type: "FILTER_RIGHT", newInput: event.target.value, field: "filterRight", results: "resultsRight" })
 }
 
 const handleFilterLeft = (event) => {
-  dispatch({ type: "FILTER_LEFT", newInput: event.target.value })
+  dispatch({ type: "FILTER_LEFT", newInput: event.target.value, field: "filterLeft", results: "resultsLeft" })
 }
 
 
@@ -96,27 +108,39 @@ const handleFilterLeft = (event) => {
           content={state.names1}
           selected={state.selected}
           selectName={selectName} 
-          filterInput={state.filterLeft} 
+          filter={state.filterLeft} 
           handleFilter={handleFilterLeft}
-          filter={state.resultsLeft} 
+          results={state.resultsLeft} 
           />
         <div className='button-div'>
-          <button className='button' onClick={handleToRight}>→</button>
-          <button className='button' onClick={handleToLeft}>←</button>
+          <button 
+            className='button' 
+            onClick={handleToRight}
+            disabled={state.disableRightArrow}>
+            →
+          </button>
+          <button 
+            className='button' 
+            onClick={handleToLeft}
+            disabled={state.disableLeftArrow}>
+            ←
+          </button>
         </div>
         <List 
           content={state.names2}
           selected={state.selected} 
           selectName={selectName} 
-          filterInput={state.filterRight} 
+          filter={state.filterRight} 
           handleFilter={handleFilterRight}
-          filter={state.resultsRight} 
+          results={state.resultsRight} 
           /> 
       </div>
     </div>
   )
 }
 
+
+// Vanha koodi, jossa käytetään useStatea
 
 /* const [selected, setSelected] = useState([])
 const [filterInputLeft, setFilterInputLeft] = useState("")
