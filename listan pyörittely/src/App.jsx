@@ -1,10 +1,27 @@
-import { useEffect, useState, useReducer } from 'react'
+import { useEffect, useReducer } from 'react'
 import './App.css'
 import List from './components/List'
+import reducer from './reducer'
+import {
+    SAVE_NEW_NAME,
+    ADD_NAME,
+    DELETE_NAME,
+    SELECT_NAME,
+    MOVE_NAME_RIGHT,
+    MOVE_NAME_LEFT,
+    FILTER_RIGHT,
+    FILTER_LEFT,
+    UPDATE_STATE
+} from "./reducer"
 
 
+const App = () => {
 
-const initialState = {
+const initialState = () => {
+  const storedData = JSON.parse(localStorage.getItem("stored"))
+  if (storedData) {return storedData}
+  else {
+  return ({
     names1: ["Maija", "Pekka", "Saara", "Meri", "Siiri"],
     names2: ["Tarja", "Jaakko", "Tuomas", "Heli", "Kalle"], 
     selected: [],
@@ -13,90 +30,56 @@ const initialState = {
     resultsLeft: [],
     resultsRight: [],
     disableRightArrow: false,
-    disableLeftArrow: false
-  }
+    disableLeftArrow: false,
+    newName: ""}
+  )}
+} 
 
-
-function reducer(state, action) {
-  switch (action.type) {
-
-    case "SELECT_NAME": {
-    //Tarkastaa onko nimi jo valittuna. Jos on, poistaa nimen selected-listalta ja poistaa nuolten disabloinnit.
-      if (state.selected.includes(action.value)) {
-          return {...state, selected: state.selected.filter(selectedName => selectedName !== action.value), disableLeftArrow: false, disableRightArrow: false}
-    //Estää valitsemasta nimiä samaan aikaan sekä names1 että names2 listoilta.
-      } else if (state.names1.filter(name => state.selected.includes(name)).length > 0 && state.names2.includes(action.value)) {
-          return {...state}
-      } else if (state.names2.filter(name => state.selected.includes(name)).length > 0 && state.names1.includes(action.value)) {
-          return {...state}
-      //Lisää nimen selected-listaan ja disabloi vasemmalle osoittavan nuolen.
-        }  else if (state.names1.includes(action.value)) {
-            return {...state, selected: state.selected.concat(action.value), disableLeftArrow: true}
-      //Lisää nimen selected-listaan ja disabloi oikealle osoittavan nuolen.
-          } else if (state.names2.includes(action.value)) {
-              return {...state, selected: state.selected.concat(action.value), disableRightArrow: true}   
-      }      
-    }
-
-    case "MOVE_NAME_RIGHT": {
-        for (let i=0; i < state.selected.length; i++) {
-          state.names2.push(state.selected[i])
-          state.names1 = state.names1.filter(name => name !== state.selected[i])
-        }
-        return {...state, selected: [], disableLeftArrow: false}
-      
-    }
-    case "MOVE_NAME_LEFT": { 
-      for (let i=0; i < state.selected.length; i++) {
-        state.names1.push(state.selected[i])
-        state.names2 = state.names2.filter(name => name !== state.selected[i])
-      }
-      return {...state, selected: [], disableRightArrow: false}
-    
-  }
-    case "FILTER_LEFT": {
-      return {...state, 
-        [action.field]: action.newInput, 
-        [action.results]: state.names1.filter(name => name.toLowerCase().includes(action.newInput.toLowerCase()))};  
-    }
-
-    case "FILTER_RIGHT": {
-      return {...state, 
-        [action.field]: action.newInput, 
-        [action.results]: state.names2.filter(name => name.toLowerCase().includes(action.newInput.toLowerCase()))}; 
-    }
-
-  }
-  throw Error("Unknown action:" + action.type)
-}
-
-
-const App = () => {
-
-const [state, dispatch] = useReducer(reducer, initialState)
+const [state, dispatch] = useReducer(reducer, initialState())
 
 useEffect(() => {
-  console.log(state.selected);
+  localStorage.setItem("stored", JSON.stringify(state))   
 }, [state])
 
+useEffect(() => {
+  const state = JSON.parse(localStorage.getItem("stored"));
+  if (state) {
+   dispatch({ type: UPDATE_STATE, data: state});
+  }
+}, []);
+
+
+
 const selectName = (name) => {
-  dispatch({ type: "SELECT_NAME", value: name })
+  dispatch({ type: SELECT_NAME, value: name })
+}
+
+const saveName = (event) => {
+  dispatch({ type: SAVE_NEW_NAME, typedName: event.target.value })
+}
+
+const addNewName = () => {
+  dispatch({ type: ADD_NAME})
 }
 
 const handleToRight = () => {
-  dispatch({ type: "MOVE_NAME_RIGHT" })
+  dispatch({ type: MOVE_NAME_RIGHT})
 }
 
 const handleToLeft = () => {
-  dispatch({ type: "MOVE_NAME_LEFT" })
+  dispatch({ type: MOVE_NAME_LEFT })
 }
 
 const handleFilterRight = (event) => {
-  dispatch({ type: "FILTER_RIGHT", newInput: event.target.value, field: "filterRight", results: "resultsRight" })
+  dispatch({ type: FILTER_RIGHT, newInput: event.target.value })
 }
 
 const handleFilterLeft = (event) => {
-  dispatch({ type: "FILTER_LEFT", newInput: event.target.value, field: "filterLeft", results: "resultsLeft" })
+  dispatch({ type: FILTER_LEFT, newInput: event.target.value })
+}
+
+const deleteName = () => {
+  dispatch({ type: DELETE_NAME })
 }
 
 
@@ -113,6 +96,12 @@ const handleFilterLeft = (event) => {
           results={state.resultsLeft} 
           />
         <div className='button-div'>
+          <input 
+            className="add-name-input" 
+            value= {state.newName}
+            onChange={saveName} 
+            placeholder='Add a new name'></input>
+          <button className='add-button' onClick={addNewName}>Add</button>
           <button 
             className='button' 
             onClick={handleToRight}
@@ -125,6 +114,7 @@ const handleFilterLeft = (event) => {
             disabled={state.disableLeftArrow}>
             ←
           </button>
+          <button className='delete-button' onClick={deleteName}>Delete</button>
         </div>
         <List 
           content={state.names2}

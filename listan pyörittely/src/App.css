@@ -59,3 +59,24 @@
   padding: 15px;
   border: solid 1px black;
 }
+
+.add-button {
+  margin: 5px;
+  padding: 5px;
+  background-color: rgb(79, 116, 218);
+  color: white;
+  border-radius: 5px;
+}
+
+.add-name-input {
+  margin: 10px;
+  padding: 4px;
+}
+
+.delete-button {
+  margin: 15px;
+  padding: 5px;
+  background-color: rgb(227, 103, 81);
+  color: white;
+  border-radius: 5px;
+}
